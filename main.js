@@ -28,7 +28,7 @@ const { v4: uuidv4 } = require('uuid');
 // balance in SOL
 
 const pool = {
-  usdt: 0,
+  usdt: 1,
   eth: 0,
   sol: 0
 }
@@ -53,14 +53,13 @@ function contributeToPool(token, amount) {
   const dollarContribution = amount * priceOracle(token);
   const poolValue = pool['usdt'] * priceOracle('usdt') + pool['eth'] * priceOracle('eth') + pool['sol'] * priceOracle('sol');
   
-  const authToIssue = dollarContribution / poolValue * authBalance;
+  const authToIssue = dollarContribution / (poolValue + dollarContribution) * authBalance;
   authBalance += authToIssue;
   pool[token] += amount;
-
   return authToIssue;
 }
 
-let authBalance = 0;
+let authBalance = 1;
 
 const MIN_DAILY_TXNS = 0.03; // approximately 1 txn per month
 const MAX_DAILY_TXNS = 1.5; // approximately 45 txns per month
@@ -172,9 +171,9 @@ function deductGasFee(user, token, gasFee, actualGasFee) {
   user.auth += authToIssue * (1 - REFUND_TAX);
 }
 
-const DAYS_TO_SIM = 90;
+const DAYS_TO_SIM = 30;
 const MIN_GAS_FEE_USD = 0.1;
-const MAX_GAS_FEE_USD = 2;
+const MAX_GAS_FEE_USD = 1;
 const GAS_FEE_MULTIPLE = 2;
 const MIN_ADDITIONAL_FEE_USD = 0.2;
 const REFUND_TAX = 0.1; // assume we only return 90% of the refund to the user
@@ -235,12 +234,18 @@ function main() {
     }
 
     // log every 10 days
-    if (day % 1 === 0) {
+    if ((day + 1) % 30 === 0) {
       // total users
-      console.log(`Day ${day}: ${Object.keys(allUsers).length} users`);
+      console.log(`Day ${day + 1}: ${Object.keys(allUsers).length} users`);
 
       // total txns
       console.log(`Total txns: ${totalTransactions}`);
+
+      // total auth issued
+      console.log(`Total AUTH issued: ${authBalance}`);
+
+      // auth price
+      console.log(`AUTH price: $${priceOracle('auth').toFixed(2)}`);
 
       // calculate pool value
       const poolValue = pool['usdt'] * priceOracle('usdt') + pool['eth'] * priceOracle('eth') + pool['sol'] * priceOracle('sol');
